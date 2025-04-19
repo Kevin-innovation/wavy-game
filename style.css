@@ -1,0 +1,189 @@
+body {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #fff4b7;
+}
+
+a-waves {
+  --x: -0.5rem;
+  --y: 50%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+a-waves:before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  background: #160000;
+  border-radius: 50%;
+  transform: translate3d(calc(var(--x) - 50%), calc(var(--y) - 50%), 0);
+  will-change: transform;
+  content: "";
+}
+
+a-waves svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+a-waves svg path {
+  fill: none;
+  stroke: #160000;
+  stroke-width: 1px;
+}
+
+/* 게임 UI 요소 스타일 */
+.game-container {
+  position: fixed;
+  z-index: 100;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+}
+
+.score-display {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #160000;
+  background: rgba(255, 244, 183, 0.7);
+  padding: 10px 15px;
+  border-radius: 10px;
+}
+
+.high-score-display {
+  position: absolute;
+  top: 80px;
+  right: 20px;
+  max-width: 250px;
+  font-size: 16px;
+  color: #160000;
+  background: rgba(255, 244, 183, 0.7);
+  padding: 10px 15px;
+  border-radius: 10px;
+}
+
+.high-score-display .title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.high-score-display ol {
+  margin: 5px 0;
+  padding-left: 25px;
+}
+
+.high-score-display li {
+  margin-bottom: 3px;
+}
+
+.game-over-screen {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 244, 183, 0.9);
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  pointer-events: auto;
+  min-width: 300px;
+}
+
+.game-over-screen h2 {
+  margin-top: 0;
+  font-size: 28px;
+}
+
+.game-over-screen .high-scores-container {
+  margin: 20px 0;
+  text-align: left;
+}
+
+.game-over-screen .high-scores-container h3 {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.high-scores-list {
+  margin: 0;
+  padding-left: 25px;
+}
+
+.high-scores-list li {
+  margin-bottom: 5px;
+}
+
+.high-scores-list li.current-score {
+  font-weight: bold;
+  color: #9c27b0;
+}
+
+.restart-button {
+  background: #160000;
+  color: #fff4b7;
+  border: none;
+  padding: 10px 20px;
+  font-size: 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: transform 0.2s;
+}
+
+.restart-button:hover {
+  transform: scale(1.05);
+}
+
+.obstacle {
+  fill: #9c27b0;
+  stroke: #160000;
+  stroke-width: 2px;
+}
+
+.obstacle.horizontal {
+  fill: #9c27b0;
+}
+
+.obstacle.vertical {
+  fill: #673ab7;
+}
+
+/* 모바일 대응 */
+@media screen and (max-width: 768px) {
+  .score-display {
+    font-size: 20px;
+    top: 10px;
+    right: 10px;
+  }
+  
+  .high-score-display {
+    font-size: 14px;
+    top: 60px;
+    right: 10px;
+    max-width: 200px;
+  }
+  
+  .game-over-screen {
+    padding: 30px;
+    width: 80%;
+  }
+}

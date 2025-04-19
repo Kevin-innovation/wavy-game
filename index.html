@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>웨이브 서퍼 게임</title>
+  <link rel="stylesheet" href="https://public.codepenassets.com/css/normalize-5.0.0.min.css">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <a-waves>
+    <svg class="js-svg"></svg>
+  </a-waves><!-- .a-waves -->
+  
+  <!-- Noise 라이브러리 추가 (웨이브 코드에서 필요함) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.4.0/simplex-noise.min.js"></script>
+  
+  <!-- 원본 웨이브 애니메이션 스크립트 -->
+  <script>
+  // 노이즈 함수 구현 (웨이브 코드에서 필요)
+  class Noise {
+    constructor(seed) {
+      this.simplex = new SimplexNoise(seed);
+    }
+    
+    perlin2(x, y) {
+      return this.simplex.noise2D(x, y);
+    }
+  }
+
+  class AWaves extends HTMLElement {
+    /**
+     * Init
+     */
+    connectedCallback() {
+      // Elements
+      this.svg = this.querySelector('.js-svg')
+
+      // Properties
+      this.mouse = {
+        x: -10,
+        y: 0,
+        lx: 0,
+        ly: 0,
+        sx: 0,
+        sy: 0,
+        v: 0,
+        vs: 0,
+        a: 0,
+        set: false,
+      }
+
+      this.lines = []
+      this.paths = []
+      this.noise = new Noise(Math.random())
+
+      // Init
+      this.setSize()
+      this.setLines()
+
+      this.bindEvents()
+      
+      // RAF
+      requestAnimationFrame(this.tick.bind(this))
+    }
+
+    /**
+     * Bind events
+     */
+    bindEvents() {
+      window.addEventListener('resize', this.onResize.bind(this))
+      
+      window.addEventListener('mousemove', this.onMouseMove.bind(this))
+      this.addEventListener('touchmove', this.onTouchMove.bind(this))
+    }
+
+    /**
+     * Resize handler
+     */
+    onResize() {
+      this.setSize()
+      this.setLines()
+    }
+
+    /**
+     * Mouse handler
+     */
+    onMouseMove(e) {
+      this.updateMousePosition(e.pageX, e.pageY)
+    }
+
+    /**
+     * Touch handler
+     */
+    onTouchMove(e) {
+      e.preventDefault()
+
+      const touch = e.touches[0]
+      this.updateMousePosition(touch.clientX, touch.clientY)
+    }
+
+    /**
+     * Update mouse position
+     */
+    updateMousePosition(x, y) {
+      const { mouse } = this
+
+      mouse.x = x - this.bounding.left
+      mouse.y = y - this.bounding.top + window.scrollY
+
+      if (!mouse.set) {
+        mouse.sx = mouse.x
+        mouse.sy = mouse.y
+        mouse.lx = mouse.x
+        mouse.ly = mouse.y
+
+        mouse.set = true
+      }
+    }
+
+    /**
+     * Set size
+     */
+    setSize() {
+      this.bounding = this.getBoundingClientRect()
+
+      this.svg.style.width = `${this.bounding.width}px`
+      this.svg.style.height = `${this.bounding.height}px`
+    }
+
+    /**
+     * Set lines - 널널한 간격으로 조정
+     */
+    setLines() {
+      const { width, height } = this.bounding
+      
+      this.lines = []
+
+      this.paths.forEach((path) => {
+        path.remove()
+      })
+      this.paths = []
+
+      // 널널한 간격으로 조정
+      const xGap = 15; // 더 넓게
+      const yGap = 38; // 더 넓게
+
+      const oWidth = width + 200
+      const oHeight = height + 30
+
+      const totalLines = Math.ceil(oWidth / xGap)
+      const totalPoints = Math.ceil(oHeight / yGap)
+
+      const xStart = (width - xGap * totalLines) / 2
+      const yStart = (height - yGap * totalPoints) / 2
+
+      for (let i = 0; i <= totalLines; i++) {
+        const points = []
+        
+        // 각 라인마다 고유한 특성 부여 (등고선 느낌)
+        const lineOffset = i * 0.2;
+        const amplitude = 25 + Math.random() * 15; // 크기 다양화
+
+        for (let j = 0; j <= totalPoints; j++) {
+          // 약간의 자연스러운 변형을 위한 오프셋
+          const offsetX = Math.sin(j * 0.1 + i * 0.5) * 3;
+          
+          const point = {
+            x: xStart + xGap * i + offsetX,
+            y: yStart + yGap * j,
+            wave: { x: 0, y: 0 },
+            cursor: { x: 0, y: 0, vx: 0, vy: 0 },
+            // 등고선 관련 속성
+            lineInfo: {
+              offset: lineOffset,
+              amplitude: amplitude
+            }
+          }
+
+          points.push(point)
+        }
+
+        // Create path
+        const path = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'path'
+        )
+        path.classList.add('a__line')
+        path.classList.add('js-line')
+
+        this.svg.appendChild(path)
+        this.paths.push(path)
+
+        // Add points
+        this.lines.push(points)
+      }
+    }
+
+    /**
+     * Move points - 등고선 느낌으로 수정
+     */
+    movePoints(time) {
+      const { lines, mouse, noise } = this
+
+      lines.forEach((points, lineIndex) => {
+        points.forEach((p) => {
+          // 각 라인의 고유 특성 가져오기
+          const { offset, amplitude } = p.lineInfo || { offset: 0, amplitude: 32 };
+          
+          // 원래 패턴과 유사하게 하되 등고선 느낌으로 수정
+          const xInfluence = noise.perlin2(
+            (p.y * 0.03 + time * 0.005) * 0.002, 
+            (offset + time * 0.001) * 0.001
+          );
+          
+          // 주로 수평 방향 변화, 수직 방향은 최소화
+          p.wave.x = Math.cos(xInfluence * Math.PI) * amplitude;
+          p.wave.y = Math.sin(xInfluence * Math.PI) * 5; // 수직 변화 최소화
+
+          // Mouse effect - 원본과 동일하게 유지
+          const dx = p.x - mouse.sx
+          const dy = p.y - mouse.sy
+          const d = Math.hypot(dx, dy)
+          const l = Math.max(175, mouse.vs)
+
+          if (d < l) {
+            const s = 1 - d / l
+            const f = Math.cos(d * 0.001) * s
+
+            p.cursor.vx += Math.cos(mouse.a) * f * l * mouse.vs * 0.00065
+            p.cursor.vy += Math.sin(mouse.a) * f * l * mouse.vs * 0.00065
+          }
+
+          p.cursor.vx += (0 - p.cursor.x) * 0.005 // String tension
+          p.cursor.vy += (0 - p.cursor.y) * 0.005
+
+          p.cursor.vx *= 0.925 // Friction/duration
+          p.cursor.vy *= 0.925
+
+          p.cursor.x += p.cursor.vx * 2 // Strength
+          p.cursor.y += p.cursor.vy * 2
+
+          p.cursor.x = Math.min(100, Math.max(-100, p.cursor.x)) // Clamp movement
+          p.cursor.y = Math.min(100, Math.max(-100, p.cursor.y))
+        })
+      })
+    }
+
+    /**
+     * Get point coordinates with movement added
+     */
+    moved(point, withCursorForce = true) {
+      const coords = {
+        x: point.x + point.wave.x + (withCursorForce ? point.cursor.x : 0),
+        y: point.y + point.wave.y + (withCursorForce ? point.cursor.y : 0),
+      }
+
+      // Round to 2 decimals
+      coords.x = Math.round(coords.x * 10) / 10
+      coords.y = Math.round(coords.y * 10) / 10
+
+      return coords
+    }
+
+    /**
+     * Draw lines - 원본 코드 기반으로 그리기
+     */
+    drawLines() {
+      const { lines, moved, paths } = this
+      
+      lines.forEach((points, lIndex) => {
+        let p1 = moved(points[0], false)
+
+        let d = `M ${p1.x} ${p1.y}`
+
+        points.forEach((p1, pIndex) => {
+          const isLast = pIndex === points.length - 1
+
+          p1 = moved(p1, !isLast)
+
+          const p2 = moved(
+            points[pIndex + 1] || points[points.length - 1],
+            !isLast
+          )
+
+          // 약간의 부드러움을 위해 Q 명령어 사용 (주석처리된 부분 활성화)
+          d += `Q ${p1.x} ${p1.y} ${(p1.x + p2.x) / 2} ${(p1.y + p2.y) / 2}`
+          // d += `L ${p1.x} ${p1.y}`
+        })
+
+        paths[lIndex].setAttribute('d', d)
+      })
+    }
+
+    /**
+     * Tick
+     */
+    tick(time) {
+      const { mouse } = this
+
+      // Smooth mouse movement
+      mouse.sx += (mouse.x - mouse.sx) * 0.1
+      mouse.sy += (mouse.y - mouse.sy) * 0.1
+
+      // Mouse velocity
+      const dx = mouse.x - mouse.lx
+      const dy = mouse.y - mouse.ly
+      const d = Math.hypot(dx, dy)
+
+      mouse.v = d
+      mouse.vs += (d - mouse.vs) * 0.1
+      mouse.vs = Math.min(100, mouse.vs)
+
+      // Mouse last position
+      mouse.lx = mouse.x
+      mouse.ly = mouse.y
+
+      // Mouse angle
+      mouse.a = Math.atan2(dy, dx)
+
+      // Animation
+      this.style.setProperty('--x', `${mouse.sx}px`)
+      this.style.setProperty('--y', `${mouse.sy}px`)
+
+      this.movePoints(time)
+      this.drawLines()
+      
+      requestAnimationFrame(this.tick.bind(this))
+    }
+  }
+
+  customElements.define('a-waves', AWaves)
+  </script>
+  
+  <!-- 새로운 게임 스크립트 -->
+  <script src="./game.js"></script>
+</body>
+</html>
