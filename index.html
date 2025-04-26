@@ -54,6 +54,9 @@
       this.paths = []
       this.noise = new Noise(Math.random())
 
+      // 기본 검은 공 크기 설정 (CSS 변수)
+      document.documentElement.style.setProperty('--ball-size', '0.5rem');
+
       // Init
       this.setSize()
       this.setLines()

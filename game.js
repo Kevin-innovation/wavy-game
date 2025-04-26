@@ -18,6 +18,30 @@ class WaveSurferGame extends HTMLElement {
     this.lastScoreThreshold = 0;
     this.scoreThreshold = 30;
     
+    // 게임 모드 관련 속성 추가
+    this.gameMode = 'easy'; // 'easy' 또는 'hard'
+    this.deathCount = 0;    // 죽은 횟수 카운트
+    this.coins = 0;         // 코인 수
+    this.blackBallSize = 0.5; // 기본 검은 공 크기
+    this.blackBallSizeMultiplier = {
+      easy: 1,
+      hard: 10
+    };
+    this.obstacleData = {
+      easy: {
+        sizeMultiplier: 1,
+        speedMultiplier: 1
+      },
+      hard: {
+        sizeMultiplier: 1.5,
+        speedMultiplier: 4
+      }
+    };
+    
+    // 상점 아이템 관련 속성
+    this.upgradeCount = 0;  // 업그레이드 횟수
+    this.upgradeCost = 100; // 기본 업그레이드 비용
+    
     // 최고 점수 로드
     this.loadHighScores();
     
@@ -27,8 +51,8 @@ class WaveSurferGame extends HTMLElement {
     // 이벤트 바인딩
     this.bindEvents();
     
-    // 게임 시작
-    this.startGame();
+    // 게임 모드 선택 화면 표시 (자동 시작 대신)
+    this.showModeSelection();
   }
   
   /**
@@ -43,6 +67,52 @@ class WaveSurferGame extends HTMLElement {
     if (!Array.isArray(this.highScores) || this.highScores.length === 0) {
       this.highScores = [];
     }
+    
+    // 코인 데이터 로드
+    const coinsData = localStorage.getItem('waveGameCoins');
+    this.coins = coinsData ? parseInt(coinsData) : 0;
+    
+    // 업그레이드 횟수 로드
+    const upgradeCount = localStorage.getItem('waveGameUpgradeCount');
+    this.upgradeCount = upgradeCount ? parseInt(upgradeCount) : 0;
+
+    // 죽은 횟수 로드 - 게임 모드별로 분리
+    const easyDeathCount = localStorage.getItem('waveGameEasyDeathCount');
+    const hardDeathCount = localStorage.getItem('waveGameHardDeathCount');
+    
+    this.totalDeathCounts = {
+      easy: easyDeathCount ? parseInt(easyDeathCount) : 0,
+      hard: hardDeathCount ? parseInt(hardDeathCount) : 0
+    };
+    
+    // 현재 모드에 맞는 죽은 횟수 설정
+    this.deathCount = this.totalDeathCounts.easy;
+    
+    // 업그레이드 비용 계산
+    if (this.upgradeCount === 0) {
+      this.upgradeCost = 100;
+    } else if (this.upgradeCount === 1) {
+      this.upgradeCost = 200;
+    } else {
+      this.upgradeCost = 200 + (this.upgradeCount - 1) * 100;
+    }
+    
+    // 공 크기 배수 업데이트 (업그레이드 횟수에 따라)
+    if (this.upgradeCount > 0) {
+      this.blackBallSizeMultiplier.hard = Math.max(2, 10 - this.upgradeCount);
+    }
+  }
+  
+  /**
+   * 죽은 횟수 저장
+   */
+  saveDeathCount() {
+    // 현재 모드에 따라 죽은 횟수 저장
+    if (this.gameMode === 'easy') {
+      localStorage.setItem('waveGameEasyDeathCount', this.totalDeathCounts.easy.toString());
+    } else {
+      localStorage.setItem('waveGameHardDeathCount', this.totalDeathCounts.hard.toString());
+    }
   }
   
   /**
@@ -52,7 +122,9 @@ class WaveSurferGame extends HTMLElement {
     // 현재 점수 추가
     this.highScores.push({
       score: Math.floor(score),
-      date: new Date().toLocaleDateString()
+      date: new Date().toLocaleDateString(),
+      mode: this.gameMode,
+      deaths: this.deathCount
     });
     
     // 점수 순서대로 정렬
@@ -64,8 +136,154 @@ class WaveSurferGame extends HTMLElement {
     // 로컬 스토리지에 저장
     localStorage.setItem('waveGameHighScores', JSON.stringify(this.highScores));
     
+    // 하드모드에서 코인 획득
+    if (this.gameMode === 'hard') {
+      const earnedCoins = Math.floor(score / 10); // 10점당 1코인
+      this.addCoins(earnedCoins);
+    }
+    
     // 현재 순위 반환 (0-based)
     return this.highScores.findIndex(item => item.score === Math.floor(score));
+  }
+  
+  /**
+   * 코인 추가 및 저장
+   */
+  addCoins(amount) {
+    this.coins += amount;
+    localStorage.setItem('waveGameCoins', this.coins.toString());
+    
+    // 코인 UI 업데이트
+    if (this.coinDisplay) {
+      this.coinDisplay.textContent = `코인: ${this.coins}`;
+    }
+  }
+  
+  /**
+   * 검은 공 크기 감소 아이템 구매
+   */
+  purchaseBallSizeReduction() {
+    // 현재 업그레이드 비용
+    const cost = this.upgradeCost;
+    
+    if (this.coins >= cost && this.blackBallSizeMultiplier.hard > 2) { // 최소 크기는 기본의 2배
+      this.coins -= cost;
+      this.blackBallSizeMultiplier.hard -= 1; // 크기 10% 감소
+      this.upgradeCount += 1; // 업그레이드 횟수 증가
+      
+      // 다음 업그레이드 비용 계산
+      if (this.upgradeCount === 1) {
+        this.upgradeCost = 200;
+      } else {
+        this.upgradeCost = 200 + (this.upgradeCount - 1) * 100;
+      }
+      
+      // 로컬 스토리지에 저장
+      localStorage.setItem('waveGameCoins', this.coins.toString());
+      localStorage.setItem('waveGameUpgradeCount', this.upgradeCount.toString());
+      
+      // 공 크기 업데이트
+      this.updateBlackBallSize();
+      
+      // UI 업데이트
+      if (this.coinDisplay) {
+        this.coinDisplay.textContent = `코인: ${this.coins}`;
+      }
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * 검은 공 크기 업데이트
+   */
+  updateBlackBallSize() {
+    const newSize = this.blackBallSize * this.blackBallSizeMultiplier[this.gameMode];
+    document.documentElement.style.setProperty('--ball-size', `${newSize}rem`);
+  }
+  
+  /**
+   * 게임 모드 선택 화면 표시
+   */
+  showModeSelection() {
+    // 기존 게임 요소 숨기기
+    this.scoreDisplay.style.display = 'none';
+    this.highScoreDisplay.style.display = 'none';
+    
+    // 모드 선택 화면
+    this.modeSelection = document.createElement('div');
+    this.modeSelection.className = 'mode-selection-screen';
+    
+    let modeHTML = `
+      <h2>게임 모드 선택</h2>
+      <div class="mode-buttons">
+        <button class="mode-button easy-mode">이지 모드</button>
+        <button class="mode-button hard-mode">하드 모드</button>
+      </div>
+      <div class="mode-description">
+        <p class="easy-desc">이지 모드: 일반 난이도로 플레이합니다. 죽은 횟수가 기록됩니다.</p>
+        <p class="hard-desc">하드 모드: 장애물이 1.5배 커지고 4배 빨라집니다. 점수에 따라 코인을 획득할 수 있습니다.</p>
+      </div>
+    `;
+    
+    this.modeSelection.innerHTML = modeHTML;
+    this.gameContainer.appendChild(this.modeSelection);
+    
+    // 모드 선택 버튼 이벤트
+    this.modeSelection.querySelector('.easy-mode').addEventListener('click', () => {
+      this.setGameMode('easy');
+    });
+    
+    this.modeSelection.querySelector('.hard-mode').addEventListener('click', () => {
+      this.setGameMode('hard');
+    });
+  }
+  
+  /**
+   * 게임 모드 설정
+   */
+  setGameMode(mode) {
+    this.gameMode = mode;
+    
+    // 모드 선택 화면 제거
+    if (this.modeSelection) {
+      this.modeSelection.remove();
+    }
+    
+    // UI 요소 보이기
+    this.scoreDisplay.style.display = 'block';
+    this.highScoreDisplay.style.display = 'block';
+    
+    // 모드에 따라 검은 공 크기 설정
+    this.updateBlackBallSize();
+    
+    // 모드에 따른 죽은 횟수 설정
+    this.deathCount = this.totalDeathCounts[mode];
+    
+    // 코인 표시 (하드모드일 때만)
+    if (mode === 'hard' && !this.coinDisplay) {
+      this.coinDisplay = document.createElement('div');
+      this.coinDisplay.className = 'coin-display';
+      this.coinDisplay.textContent = `코인: ${this.coins}`;
+      this.gameInfoContainer.appendChild(this.coinDisplay);
+    } else if (this.coinDisplay) {
+      this.coinDisplay.style.display = mode === 'hard' ? 'block' : 'none';
+    }
+    
+    // 죽은 횟수 표시 (양쪽 모드 모두에서 표시)
+    if (!this.deathDisplay) {
+      this.deathDisplay = document.createElement('div');
+      this.deathDisplay.className = 'death-display';
+      this.deathDisplay.textContent = `죽은 횟수: ${this.deathCount}`;
+      this.gameInfoContainer.appendChild(this.deathDisplay);
+    } else {
+      this.deathDisplay.style.display = 'block';
+      this.deathDisplay.textContent = `죽은 횟수: ${this.deathCount}`;
+    }
+    
+    // 게임 시작
+    this.startGame();
   }
   
   /**
@@ -77,11 +295,16 @@ class WaveSurferGame extends HTMLElement {
     this.gameContainer.className = 'game-container';
     document.body.appendChild(this.gameContainer);
     
+    // 게임 정보 컨테이너 생성
+    this.gameInfoContainer = document.createElement('div');
+    this.gameInfoContainer.className = 'game-info-container';
+    this.gameContainer.appendChild(this.gameInfoContainer);
+    
     // 점수 표시
     this.scoreDisplay = document.createElement('div');
     this.scoreDisplay.className = 'score-display';
     this.scoreDisplay.textContent = '점수: 0';
-    this.gameContainer.appendChild(this.scoreDisplay);
+    this.gameInfoContainer.appendChild(this.scoreDisplay);
     
     // 최고 점수 표시
     this.highScoreDisplay = document.createElement('div');
@@ -93,24 +316,21 @@ class WaveSurferGame extends HTMLElement {
     this.gameOverScreen = document.createElement('div');
     this.gameOverScreen.className = 'game-over-screen';
     
-    // 게임 오버 화면 내용
-    let gameOverHTML = `
+    // 게임 오버 화면 기본 템플릿 (실제 내용은 gameOver()에서 업데이트)
+    this.gameOverScreen.innerHTML = `
       <h2>게임 오버</h2>
       <p>최종 점수: <span class="final-score">0</span></p>
       <div class="high-scores-container">
         <h3>최고 점수</h3>
         <ol class="high-scores-list"></ol>
       </div>
-      <button class="restart-button">다시 시작</button>
+      <div class="button-container">
+        <button class="restart-button">다시 시작</button>
+      </div>
     `;
-    this.gameOverScreen.innerHTML = gameOverHTML;
+    
     this.gameOverScreen.style.display = 'none';
     this.gameContainer.appendChild(this.gameOverScreen);
-    
-    // 다시 시작 버튼 이벤트
-    this.gameOverScreen.querySelector('.restart-button').addEventListener('click', () => {
-      this.restartGame();
-    });
   }
   
   /**
@@ -122,7 +342,19 @@ class WaveSurferGame extends HTMLElement {
       let html = `<div class="title">최고 점수</div><ol>`;
       
       this.highScores.slice(0, 5).forEach((score, index) => {
-        html += `<li>${score.score} (${score.date})</li>`;
+        let scoreText = `${score.score} (${score.date})`;
+        
+        // 모드 정보 추가
+        if (score.mode) {
+          scoreText += ` - ${score.mode === 'easy' ? '이지' : '하드'}`;
+        }
+        
+        // 이지모드에서는 죽은 횟수 표시
+        if (score.mode === 'easy' && score.deaths !== undefined) {
+          scoreText += ` (죽음: ${score.deaths})`;
+        }
+        
+        html += `<li>${scoreText}</li>`;
       });
       
       html += `</ol>`;
@@ -154,16 +386,24 @@ class WaveSurferGame extends HTMLElement {
     const directions = ['top', 'right', 'bottom', 'left'];
     const direction = directions[Math.floor(Math.random() * directions.length)];
     
-    // 사이즈 2배 증가 (30~90 사이의 랜덤 크기)
-    const size = 30 + Math.random() * 60;
+    // 하드모드에서 간헐적으로 원형 장애물 생성 (15% 확률)
+    const isCircle = this.gameMode === 'hard' && Math.random() < 0.15;
+    
+    // 모드에 따른 크기 조정
+    const sizeMultiplier = this.obstacleData[this.gameMode].sizeMultiplier;
+    const size = (30 + Math.random() * 60) * sizeMultiplier;
     const halfSize = size / 2;
     
     let x, y;
     let moveX = 0, moveY = 0;
-    let obstacleClass = 'obstacle';
+    let obstacleClass = isCircle ? 'obstacle circle' : 'obstacle';
     
-    // 속도 다양화
-    const speedVariation = 1.0 + Math.random() * 2.0;
+    // 모드에 따른 속도 조정
+    const speedMultiplier = this.obstacleData[this.gameMode].speedMultiplier;
+    // 원형 장애물은 매우 빠르게 (3배)
+    const circleSpeedMultiplier = 3;
+    const finalSpeedMultiplier = isCircle ? circleSpeedMultiplier * speedMultiplier : speedMultiplier;
+    const speedVariation = (1.0 + Math.random() * 2.0) * finalSpeedMultiplier;
     
     // 방향에 따라 시작 위치와 이동 방향 결정
     switch(direction) {
@@ -193,22 +433,40 @@ class WaveSurferGame extends HTMLElement {
         break;
     }
     
-    // 장애물 SVG 요소 생성
-    const obstacle = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    obstacle.setAttribute('class', obstacleClass);
-    obstacle.setAttribute('width', size);
-    obstacle.setAttribute('height', size);
-    obstacle.setAttribute('x', x - halfSize);
-    obstacle.setAttribute('y', y - halfSize);
-    
-    // 사이즈에 따른 색상 변경
-    if (size < 50) {
-      obstacle.setAttribute('fill', '#e91e63'); // 작은 장애물
-    } else if (size < 70) {
-      obstacle.setAttribute('fill', '#9c27b0'); // 중간 장애물
+    // 장애물 SVG 요소 생성 (원 또는 사각형)
+    let obstacle;
+    if (isCircle) {
+      obstacle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      obstacle.setAttribute('class', obstacleClass);
+      obstacle.setAttribute('r', halfSize);
+      obstacle.setAttribute('cx', x);
+      obstacle.setAttribute('cy', y);
     } else {
-      obstacle.setAttribute('fill', '#673ab7'); // 큰 장애물
+      obstacle = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      obstacle.setAttribute('class', obstacleClass);
+      obstacle.setAttribute('width', size);
+      obstacle.setAttribute('height', size);
+      obstacle.setAttribute('x', x - halfSize);
+      obstacle.setAttribute('y', y - halfSize);
     }
+    
+    // 사이즈와 타입에 따른 색상 변경
+    let fillColor;
+    if (isCircle) {
+      // 원형 장애물의 색상을 빨간색으로 고정
+      fillColor = '#f44336'; // 빨간색 (레드)
+    } else {
+      // 사각형 장애물의 기존 색상 로직
+      if (size < 50) {
+        fillColor = '#e91e63'; // 작은 장애물
+      } else if (size < 70) {
+        fillColor = '#9c27b0'; // 중간 장애물
+      } else {
+        fillColor = '#673ab7'; // 큰 장애물
+      }
+    }
+    
+    obstacle.setAttribute('fill', fillColor);
     
     // SVG에 추가
     this.svg.appendChild(obstacle);
@@ -222,7 +480,8 @@ class WaveSurferGame extends HTMLElement {
       halfSize,
       moveX,
       moveY,
-      direction
+      direction,
+      isCircle // 원형 여부 추가
     });
   }
   
@@ -254,8 +513,14 @@ class WaveSurferGame extends HTMLElement {
       obstacle.x += obstacle.moveX * this.gameSpeed;
       obstacle.y += obstacle.moveY * this.gameSpeed;
       
-      obstacle.element.setAttribute('x', obstacle.x - obstacle.halfSize);
-      obstacle.element.setAttribute('y', obstacle.y - obstacle.halfSize);
+      // 원형이면 cx, cy 업데이트, 사각형이면 x, y 업데이트
+      if (obstacle.isCircle) {
+        obstacle.element.setAttribute('cx', obstacle.x);
+        obstacle.element.setAttribute('cy', obstacle.y);
+      } else {
+        obstacle.element.setAttribute('x', obstacle.x - obstacle.halfSize);
+        obstacle.element.setAttribute('y', obstacle.y - obstacle.halfSize);
+      }
       
       // 화면을 벗어나면 제거
       if (
@@ -275,9 +540,25 @@ class WaveSurferGame extends HTMLElement {
       const distance = Math.sqrt(dx * dx + dy * dy);
       
       // 충돌 거리 (마우스 커서(검은 점)의 반지름 + 장애물의 반지름)
-      const collisionDistance = 0.5 + obstacle.halfSize * 0.8;
+      // 모드에 따라 충돌 범위 조정
+      const cursorRadius = 0.5 * this.blackBallSizeMultiplier[this.gameMode];
+      // 하드모드에서는 더 민감한 충돌 판정 (시각적 크기보다 더 큰 판정 범위), 이지모드에서는 약간 여유 있게
+      const collisionThreshold = this.gameMode === 'hard' ? 1.5 : 0.8;
+      const collisionDistance = cursorRadius * collisionThreshold + obstacle.halfSize * collisionThreshold;
       
       if (distance < collisionDistance) {
+        // 죽은 횟수 증가 (모든 모드에서)
+        this.deathCount++;
+        // 총 죽은 횟수도 증가
+        this.totalDeathCounts[this.gameMode]++;
+        
+        // 로컬 스토리지에 저장
+        this.saveDeathCount();
+        
+        if (this.deathDisplay) {
+          this.deathDisplay.textContent = `죽은 횟수: ${this.deathCount}`;
+        }
+        
         this.gameOver();
         return;
       }
@@ -301,6 +582,16 @@ class WaveSurferGame extends HTMLElement {
       // 다중 장애물 생성 (점수가 높을수록 더 많은 장애물)
       const obstacleCount = Math.min(15, 2 + Math.floor(currentScore / this.scoreThreshold));
       this.createMultipleObstacles(obstacleCount);
+      
+      // 하드모드에서 점수 획득시 코인 지급
+      if (this.gameMode === 'hard') {
+        const earnedCoins = Math.floor(currentScore / this.scoreThreshold);
+        if (earnedCoins > 0) {
+          this.addCoins(earnedCoins);
+          
+          // 코인 획득 이펙트 (나중에 구현)
+        }
+      }
     }
     
     // 정기적인 게임 속도 미세 증가
@@ -322,6 +613,11 @@ class WaveSurferGame extends HTMLElement {
     this.lastScoreThreshold = 0;
     this.scoreDisplay.textContent = '점수: 0';
     this.gameOverScreen.style.display = 'none';
+    
+    // 죽은 횟수는 초기화하지 않음! (누적됨)
+    if (this.deathDisplay) {
+      this.deathDisplay.textContent = `죽은 횟수: ${this.deathCount}`;
+    }
     
     // 기존 요소 제거
     this.obstacles.forEach(obstacle => obstacle.element.remove());
@@ -351,16 +647,47 @@ class WaveSurferGame extends HTMLElement {
     // 최고 점수 표시 업데이트
     this.updateHighScoreDisplay();
     
-    // 게임 오버 화면에 최종 점수 표시
-    this.gameOverScreen.querySelector('.final-score').textContent = finalScore;
+    // 게임 오버 화면 업데이트
+    // 내용을 처음부터 다시 생성하여 참조 오류 방지
+    this.gameOverScreen.innerHTML = `
+      <h2>게임 오버</h2>
+      <p>최종 점수: <span class="final-score">${finalScore}</span></p>
+      <div class="game-over-info">
+        <p>모드: ${this.gameMode === 'easy' ? '이지' : '하드'}</p>
+        <p>죽은 횟수: ${this.deathCount}</p>
+        ${this.gameMode === 'hard' ? 
+          `<p>획득한 코인: ${Math.floor(finalScore / 10)}</p>
+           <p>총 보유 코인: ${this.coins}</p>` : ''}
+      </div>
+      <div class="high-scores-container">
+        <h3>최고 점수</h3>
+        <ol class="high-scores-list"></ol>
+      </div>
+      <div class="button-container">
+        <button class="restart-button">같은 모드로 다시 시작</button>
+        <button class="mode-select-button">모드 선택으로 돌아가기</button>
+        <button class="shop-button gameover-shop-button">상점</button>
+      </div>
+    `;
     
-    // 게임 오버 화면에 최고 점수 리스트 업데이트
+    // 최고 점수 리스트 업데이트
     const highScoresList = this.gameOverScreen.querySelector('.high-scores-list');
-    highScoresList.innerHTML = '';
     
     this.highScores.forEach((score, index) => {
       const li = document.createElement('li');
-      li.textContent = `${score.score} (${score.date})`;
+      let scoreText = `${score.score} (${score.date})`;
+      
+      // 모드 정보 추가
+      if (score.mode) {
+        scoreText += ` - ${score.mode === 'easy' ? '이지' : '하드'}`;
+      }
+      
+      // 죽은 횟수 표시 (양쪽 모드에서)
+      if (score.deaths !== undefined) {
+        scoreText += ` (죽음: ${score.deaths})`;
+      }
+      
+      li.textContent = scoreText;
       
       // 현재 점수에 하이라이트 표시
       if (index === rank) {
@@ -368,6 +695,24 @@ class WaveSurferGame extends HTMLElement {
       }
       
       highScoresList.appendChild(li);
+    });
+    
+    // 버튼 이벤트 리스너 추가
+    const restartButton = this.gameOverScreen.querySelector('.restart-button');
+    const modeSelectButton = this.gameOverScreen.querySelector('.mode-select-button');
+    const shopButton = this.gameOverScreen.querySelector('.shop-button');
+    
+    // 이벤트 리스너 제거 및 다시 추가
+    restartButton.addEventListener('click', () => {
+      this.restartGame();
+    });
+    
+    modeSelectButton.addEventListener('click', () => {
+      this.showModeSelection();
+    });
+    
+    shopButton.addEventListener('click', () => {
+      this.showShop();
     });
     
     // 게임 오버 화면 표시
@@ -399,6 +744,92 @@ class WaveSurferGame extends HTMLElement {
     
     // 다음 프레임 요청
     requestAnimationFrame(this.gameLoop.bind(this));
+  }
+  
+  /**
+   * 상점 화면 표시
+   */
+  showShop() {
+    // 게임 오버 화면 숨기기
+    this.gameOverScreen.style.display = 'none';
+    
+    // 상점 화면 생성
+    const shopScreen = document.createElement('div');
+    shopScreen.className = 'shop-screen';
+    
+    let shopHTML = `
+      <h2>상점</h2>
+      <p class="shop-coins">보유 코인: ${this.coins}</p>
+      <div class="shop-items">
+        <div class="shop-item">
+          <h3>검은 공 크기 감소</h3>
+          <p>하드모드에서 검은 공 크기를 1단계 줄입니다.</p>
+          <p>현재 크기: 기본의 ${this.blackBallSizeMultiplier.hard}배</p>
+          <p>가격: ${this.upgradeCost} 코인</p>
+          <button class="shop-item-button" id="reduce-ball-size">구매하기</button>
+        </div>
+      </div>
+      <button class="back-button">돌아가기</button>
+    `;
+    
+    shopScreen.innerHTML = shopHTML;
+    this.gameContainer.appendChild(shopScreen);
+    
+    // 아이템 구매 버튼 이벤트
+    const reduceButton = shopScreen.querySelector('#reduce-ball-size');
+    reduceButton.addEventListener('click', () => {
+      if (this.purchaseBallSizeReduction()) {
+        // 구매 성공
+        shopScreen.querySelector('.shop-coins').textContent = `보유 코인: ${this.coins}`;
+        shopScreen.querySelector('.shop-item p:nth-child(3)').textContent = `현재 크기: 기본의 ${this.blackBallSizeMultiplier.hard}배`;
+        
+        // 다음 업그레이드 비용 업데이트
+        shopScreen.querySelector('.shop-item p:nth-child(4)').textContent = `가격: ${this.upgradeCost} 코인`;
+        
+        reduceButton.disabled = this.blackBallSizeMultiplier.hard <= 2 || this.coins < this.upgradeCost;
+        
+        // 시각적 피드백
+        reduceButton.classList.add('purchased');
+        reduceButton.textContent = '구매 완료!';
+        
+        setTimeout(() => {
+          reduceButton.classList.remove('purchased');
+          if (this.blackBallSizeMultiplier.hard <= 2) {
+            reduceButton.textContent = '최소 크기 도달';
+          } else if (this.coins < this.upgradeCost) {
+            reduceButton.textContent = '코인 부족';
+          } else {
+            reduceButton.textContent = '구매하기';
+          }
+        }, 1000);
+      } else {
+        // 구매 실패
+        reduceButton.classList.add('purchase-failed');
+        reduceButton.textContent = this.coins < this.upgradeCost ? '코인 부족!' : '최소 크기 도달!';
+        
+        setTimeout(() => {
+          reduceButton.classList.remove('purchase-failed');
+          reduceButton.textContent = '구매하기';
+        }, 1000);
+      }
+    });
+    
+    // 돌아가기 버튼 이벤트
+    shopScreen.querySelector('.back-button').addEventListener('click', () => {
+      shopScreen.remove();
+      this.gameOverScreen.style.display = 'block';
+    });
+    
+    // 버튼 비활성화 상태 설정
+    if (this.blackBallSizeMultiplier.hard <= 2) {
+      reduceButton.disabled = true;
+      reduceButton.textContent = '최소 크기 도달';
+    }
+    
+    if (this.coins < this.upgradeCost) {
+      reduceButton.disabled = true;
+      reduceButton.textContent = '코인 부족';
+    }
   }
 }
 

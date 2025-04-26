@@ -24,8 +24,8 @@ a-waves:before {
   position: absolute;
   top: 0;
   left: 0;
-  width: 0.5rem;
-  height: 0.5rem;
+  width: var(--ball-size, 0.5rem);
+  height: var(--ball-size, 0.5rem);
   background: #160000;
   border-radius: 50%;
   transform: translate3d(calc(var(--x) - 50%), calc(var(--y) - 50%), 0);
@@ -56,16 +56,26 @@ a-waves svg path {
   pointer-events: none;
 }
 
-.score-display {
+/* 상단 UI 컨테이너 추가 - 게임 정보를 담는 플렉스 컨테이너 */
+.game-info-container {
   position: absolute;
   top: 20px;
   right: 20px;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 10px;
+}
+
+.score-display {
+  position: relative;
   font-size: 24px;
   font-weight: bold;
   color: #160000;
-  background: rgba(255, 244, 183, 0.7);
+  background: rgba(255, 255, 255, 0.85);
   padding: 10px 15px;
   border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .high-score-display {
@@ -75,9 +85,10 @@ a-waves svg path {
   max-width: 250px;
   font-size: 16px;
   color: #160000;
-  background: rgba(255, 244, 183, 0.7);
+  background: rgba(255, 255, 255, 0.85);
   padding: 10px 15px;
   border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .high-score-display .title {
@@ -93,6 +104,248 @@ a-waves svg path {
 
 .high-score-display li {
   margin-bottom: 3px;
+}
+
+/* 죽은 횟수 표시 */
+.death-display {
+  position: relative;
+  font-size: 24px;
+  font-weight: bold;
+  color: #e91e63;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 10px 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 코인 표시 */
+.coin-display {
+  position: relative;
+  font-size: 24px;
+  font-weight: bold;
+  color: #4caf50;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 10px 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 모드 선택 화면 */
+.mode-selection-screen {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 244, 183, 0.9);
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  pointer-events: auto;
+  min-width: 320px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.mode-selection-screen h2 {
+  margin-top: 0;
+  font-size: 28px;
+  color: #160000;
+  margin-bottom: 30px;
+}
+
+.mode-buttons {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 30px;
+}
+
+.mode-button {
+  background: #160000;
+  color: #fff4b7;
+  border: none;
+  padding: 12px 24px;
+  font-size: 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.3s;
+}
+
+.mode-button:hover {
+  transform: scale(1.05);
+}
+
+.mode-button.easy-mode {
+  background: #2196f3;
+}
+
+.mode-button.hard-mode {
+  background: #e91e63;
+}
+
+.mode-description {
+  text-align: left;
+  margin-bottom: 30px;
+}
+
+.mode-description p {
+  margin: 10px 0;
+  line-height: 1.5;
+}
+
+.mode-description .easy-desc {
+  color: #2196f3;
+}
+
+.mode-description .hard-desc {
+  color: #e91e63;
+}
+
+/* 상점 섹션 */
+.shop-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px dashed #160000;
+  text-align: center;
+}
+
+.shop-section h3 {
+  margin-top: 0;
+  color: #ffc107;
+}
+
+.shop-button {
+  background: #ffc107;
+  color: #160000;
+  border: none;
+  padding: 10px 20px;
+  font-size: 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: transform 0.2s;
+}
+
+.shop-button:hover {
+  transform: scale(1.05);
+  background: #ffb300;
+}
+
+/* 게임오버 화면에서의 상점 버튼 */
+.gameover-shop-button {
+  background: #ffc107;
+  color: #160000;
+  max-width: 250px;
+  width: 100%;
+}
+
+.gameover-shop-button:hover {
+  background: #ffb300;
+}
+
+/* 상점 화면 스타일 */
+.shop-screen {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 244, 183, 0.9);
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  pointer-events: auto;
+  min-width: 350px;
+  max-width: 80%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.shop-screen h2 {
+  margin-top: 0;
+  font-size: 28px;
+  color: #160000;
+  margin-bottom: 20px;
+}
+
+.shop-coins {
+  font-size: 20px;
+  font-weight: bold;
+  color: #4caf50;
+  margin-bottom: 20px;
+}
+
+.shop-items {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.shop-item {
+  background: rgba(255, 255, 255, 0.3);
+  padding: 15px;
+  border-radius: 15px;
+  text-align: left;
+}
+
+.shop-item h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #160000;
+}
+
+.shop-item p {
+  margin: 5px 0;
+  font-size: 16px;
+}
+
+.shop-item-button {
+  background: #ffc107;
+  color: #160000;
+  border: none;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: transform 0.2s, background 0.3s;
+  width: 100%;
+  text-align: center;
+}
+
+.shop-item-button:hover:not(:disabled) {
+  transform: scale(1.05);
+  background: #ffb300;
+}
+
+.shop-item-button:disabled {
+  background: #ccc;
+  color: #666;
+  cursor: not-allowed;
+  text-align: center;
+}
+
+.shop-item-button.purchased {
+  background: #4caf50;
+  color: white;
+}
+
+.shop-item-button.purchase-failed {
+  background: #f44336;
+  color: white;
+}
+
+.back-button {
+  background: #160000;
+  color: #fff4b7;
+  border: none;
+  padding: 10px 20px;
+  font-size: 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  margin-top: 20px;
+}
+
+.back-button:hover {
+  transform: scale(1.05);
 }
 
 .game-over-screen {
@@ -111,6 +364,19 @@ a-waves svg path {
 .game-over-screen h2 {
   margin-top: 0;
   font-size: 28px;
+}
+
+.game-over-info {
+  margin: 20px 0;
+  text-align: left;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+}
+
+.game-over-info p {
+  margin: 5px 0;
+  font-size: 16px;
 }
 
 .game-over-screen .high-scores-container {
@@ -137,7 +403,15 @@ a-waves svg path {
   color: #9c27b0;
 }
 
-.restart-button {
+.button-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.restart-button, .mode-select-button {
   background: #160000;
   color: #fff4b7;
   border: none;
@@ -145,12 +419,17 @@ a-waves svg path {
   font-size: 18px;
   border-radius: 10px;
   cursor: pointer;
-  margin-top: 20px;
   transition: transform 0.2s;
+  width: 100%;
+  max-width: 250px;
 }
 
-.restart-button:hover {
+.restart-button:hover, .mode-select-button:hover {
   transform: scale(1.05);
+}
+
+.mode-select-button {
+  background: #673ab7;
 }
 
 .obstacle {
@@ -167,23 +446,49 @@ a-waves svg path {
   fill: #673ab7;
 }
 
+.obstacle.circle {
+  stroke-width: 3px;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.7));
+  fill: #f44336 !important;
+}
+
 /* 모바일 대응 */
 @media screen and (max-width: 768px) {
-  .score-display {
-    font-size: 20px;
+  .game-info-container {
     top: 10px;
     right: 10px;
+    gap: 5px;
+  }
+  
+  .score-display {
+    font-size: 18px;
+    padding: 8px 12px;
   }
   
   .high-score-display {
-    font-size: 14px;
-    top: 60px;
+    top: 70px;
     right: 10px;
-    max-width: 200px;
+    max-width: calc(100% - 40px);
+    font-size: 14px;
   }
   
-  .game-over-screen {
-    padding: 30px;
-    width: 80%;
+  .death-display {
+    font-size: 18px;
+    padding: 8px 12px;
+  }
+  
+  .coin-display {
+    font-size: 18px;
+    padding: 8px 12px;
+  }
+  
+  .game-over-screen, .mode-selection-screen {
+    padding: 20px;
+    min-width: 280px;
+  }
+  
+  .mode-buttons {
+    flex-direction: column;
+    gap: 15px;
   }
 }
