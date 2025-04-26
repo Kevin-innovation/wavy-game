@@ -3,6 +3,7 @@
 ![웨이브 서퍼 게임](./preview.png)
 
 물결 위를 서핑하며 장애물을 피하는 간단하고 중독성 있는 웹 게임입니다.
+실행 주소 : https://kevin-innovation.github.io/wavy-game/
 
 ## 게임 방법
 
@@ -50,12 +51,7 @@
 
 ## 설치 및 실행
 
-1. 저장소 클론하기:
-   ```
-   git clone https://github.com/yourusername/wavy-game.git
-   ```
-
-2. 브라우저에서 `index.html` 열기
+1. https://kevin-innovation.github.io/wavy-game/
 
 ## 개발자 정보
 
