@@ -26,11 +26,139 @@ a-waves:before {
   left: 0;
   width: var(--ball-size, 0.5rem);
   height: var(--ball-size, 0.5rem);
-  background: #160000;
+  background: var(--ball-color, #160000);
   border-radius: 50%;
   transform: translate3d(calc(var(--x) - 50%), calc(var(--y) - 50%), 0);
   will-change: transform;
   content: "";
+  transition: background-color 0.3s;
+}
+
+/* 무지개 색상 효과 */
+a-waves:before.rainbow {
+  animation: rainbow-ball 3s linear infinite;
+}
+
+/* 무지개 색상 메인 공 */
+@keyframes rainbow-ball {
+  0% { --ball-color: #ff0000; }
+  16.6% { --ball-color: #ff8800; }
+  33.3% { --ball-color: #ffff00; }
+  50% { --ball-color: #00ff00; }
+  66.6% { --ball-color: #0088ff; }
+  83.3% { --ball-color: #8800ff; }
+  100% { --ball-color: #ff0000; }
+}
+
+/* 색상 및 트레일 커스터마이징 */
+.customization-section {
+  margin-top: 20px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 15px;
+  border-radius: 10px;
+  overflow: visible;
+}
+
+.customization-section h3 {
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.color-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 15px 0 30px 0;
+  justify-content: center;
+}
+
+.ball-color-option {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  position: relative;
+  overflow: visible;
+  cursor: pointer;
+  border: 2px solid transparent;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s;
+  margin-bottom: 25px;
+}
+
+.ball-color-option:hover {
+  transform: scale(1.1);
+}
+
+.ball-color-option.selected {
+  border-color: #ffeb3b;
+  box-shadow: 0 0 8px rgba(255, 235, 59, 0.7);
+}
+
+.ball-color-option.locked {
+  filter: grayscale(0.7);
+  cursor: not-allowed;
+}
+
+.color-name, .price {
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  font-size: 11px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.ball-color-option .price {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.ball-color-option:hover .price {
+  opacity: 1;
+}
+
+.ball-color-option .color-name {
+  bottom: -25px;
+}
+
+.buy-ball-color {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #ffc107;
+  color: #000;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 5;
+}
+
+.ball-color-option:hover .buy-ball-color {
+  opacity: 1;
+}
+
+.selected-mark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 16px;
+  text-shadow: 0 0 2px black;
 }
 
 a-waves svg {
@@ -65,17 +193,59 @@ a-waves svg path {
   flex-direction: row-reverse;
   align-items: center;
   gap: 10px;
+  pointer-events: auto;
+  z-index: 1000;
 }
 
-.score-display {
+.score-display, .death-display, .coin-display, .developer-button {
   position: relative;
   font-size: 24px;
   font-weight: bold;
-  color: #160000;
   background: rgba(255, 255, 255, 0.85);
   padding: 10px 15px;
   border-radius: 10px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+}
+
+.score-display, .death-display, .coin-display {
+  color: #160000;
+  pointer-events: none;
+}
+
+.developer-button {
+  color: #333;
+  cursor: pointer;
+  user-select: none;
+  margin-right: 10px;
+  transition: all 0.2s ease;
+  pointer-events: auto !important;
+  z-index: 1000;
+}
+
+.developer-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+}
+
+.developer-button span {
+  background: linear-gradient(to right, #ff0000, #ff8800, #ffff00, #00ff00, #0088ff, #8800ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-family: monospace;
+  font-weight: bold;
+}
+
+.death-display {
+  color: #e91e63;
+}
+
+.coin-display {
+  color: #4caf50;
 }
 
 .high-score-display {
@@ -104,30 +274,6 @@ a-waves svg path {
 
 .high-score-display li {
   margin-bottom: 3px;
-}
-
-/* 죽은 횟수 표시 */
-.death-display {
-  position: relative;
-  font-size: 24px;
-  font-weight: bold;
-  color: #e91e63;
-  background: rgba(255, 255, 255, 0.85);
-  padding: 10px 15px;
-  border-radius: 10px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* 코인 표시 */
-.coin-display {
-  position: relative;
-  font-size: 24px;
-  font-weight: bold;
-  color: #4caf50;
-  background: rgba(255, 255, 255, 0.85);
-  padding: 10px 15px;
-  border-radius: 10px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* 모드 선택 화면 */
@@ -255,6 +401,8 @@ a-waves svg path {
   min-width: 350px;
   max-width: 80%;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 .shop-screen h2 {
