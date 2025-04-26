@@ -38,6 +38,50 @@ class WaveSurferGame extends HTMLElement {
       }
     };
     
+    // 개발자 모드 관련 속성
+    this.isDeveloperMode = false;
+    
+    // 색상 관련 속성 추가
+    this.ballColors = [
+      { name: '검정', color: '#160000', price: 0 },      // 기본 검정
+      { name: '빨강', color: '#ff0000', price: 30 },     // 빨강
+      { name: '주황', color: '#ff8800', price: 60 },     // 주황
+      { name: '노랑', color: '#ffff00', price: 90 },     // 노랑
+      { name: '초록', color: '#00ff00', price: 120 },    // 초록
+      { name: '파랑', color: '#0088ff', price: 150 },    // 파랑
+      { name: '남색', color: '#0000ff', price: 180 },    // 남색
+      { name: '보라', color: '#8800ff', price: 210 },    // 보라
+      { name: '은색', color: '#c0c0c0', price: 240 },    // 은색
+      { name: '금색', color: '#ffd700', price: 270 },    // 금색
+      { name: '무지개', color: 'rainbow', price: 300 }   // 무지개(특수)
+    ];
+    
+    // 현재 선택된 색상 (인덱스)
+    this.selectedColorIndex = 0;
+    
+    // 트레일 관련 속성 추가
+    // this.hasTrail = false;  // 트레일 해금 여부
+    // this.trailColors = [
+    //   { name: '없음', color: 'none', price: 0 },       // 트레일 없음
+    //   { name: '빨강', color: '#ff0000', price: 10 },   // 빨강
+    //   { name: '주황', color: '#ff8800', price: 40 },   // 주황
+    //   { name: '노랑', color: '#ffff00', price: 70 },   // 노랑
+    //   { name: '초록', color: '#00ff00', price: 100 },  // 초록
+    //   { name: '파랑', color: '#0088ff', price: 130 },  // 파랑
+    //   { name: '남색', color: '#0000ff', price: 160 },  // 남색
+    //   { name: '보라', color: '#8800ff', price: 190 },  // 보라
+    //   { name: '은색', color: '#c0c0c0', price: 220 },  // 은색
+    //   { name: '금색', color: '#ffd700', price: 250 },  // 금색
+    //   { name: '무지개', color: 'rainbow', price: 300 } // 무지개(특수)
+    // ];
+    
+    // 현재 선택된 트레일 색상 (인덱스)
+    // this.selectedTrailIndex = 0;
+    
+    // 트레일 효과를 위한 위치 기록 배열
+    // this.trailPositions = [];
+    // this.trailMaxLength = 15; // 트레일 길이
+    
     // 상점 아이템 관련 속성
     this.upgradeCount = 0;  // 업그레이드 횟수
     this.upgradeCost = 100; // 기본 업그레이드 비용
@@ -101,106 +145,221 @@ class WaveSurferGame extends HTMLElement {
     if (this.upgradeCount > 0) {
       this.blackBallSizeMultiplier.hard = Math.max(2, 10 - this.upgradeCount);
     }
+    
+    // 선택된 색상 로드
+    const selectedColorIndex = localStorage.getItem('waveGameSelectedColor');
+    this.selectedColorIndex = selectedColorIndex ? parseInt(selectedColorIndex) : 0;
+    
+    // 트레일 보유 여부 로드
+    // const hasTrail = localStorage.getItem('waveGameHasTrail');
+    // this.hasTrail = hasTrail ? hasTrail === 'true' : false;
+    
+    // 선택된 트레일 색상 로드
+    // const selectedTrailIndex = localStorage.getItem('waveGameSelectedTrail');
+    // this.selectedTrailIndex = selectedTrailIndex ? parseInt(selectedTrailIndex) : 0;
+    
+    // 구매한 트레일 색상 로드
+    // const purchasedTrails = localStorage.getItem('waveGamePurchasedTrails');
+    // this.purchasedTrails = purchasedTrails ? JSON.parse(purchasedTrails) : [0]; // 기본값은 '없음' 상태
+    
+    // 해금된 색상 로드
+    const unlockedColors = localStorage.getItem('waveGameUnlockedColors');
+    this.unlockedColors = unlockedColors ? JSON.parse(unlockedColors) : [0]; // 기본값은 '검정' 색상만
+    
+    // 개발자 모드 상태 로드
+    const isDeveloperMode = localStorage.getItem('waveGameDeveloperMode');
+    this.isDeveloperMode = isDeveloperMode === 'true';
+    
+    // 현재 선택된 색상과 트레일 적용
+    this.applySelectedColorAndTrail();
   }
   
   /**
-   * 죽은 횟수 저장
+   * 선택된 색상 저장
    */
-  saveDeathCount() {
-    // 현재 모드에 따라 죽은 횟수 저장
-    if (this.gameMode === 'easy') {
-      localStorage.setItem('waveGameEasyDeathCount', this.totalDeathCounts.easy.toString());
+  saveSelectedColor() {
+    localStorage.setItem('waveGameSelectedColor', this.selectedColorIndex.toString());
+    localStorage.setItem('waveGameUnlockedColors', JSON.stringify(this.unlockedColors));
+  }
+  
+  /**
+   * 트레일 설정 저장
+   */
+  saveTrailSettings() {
+    localStorage.setItem('waveGameHasTrail', this.hasTrail.toString());
+    localStorage.setItem('waveGameSelectedTrail', this.selectedTrailIndex.toString());
+    localStorage.setItem('waveGamePurchasedTrails', JSON.stringify(this.purchasedTrails));
+  }
+  
+  /**
+   * 선택된 색상과 트레일 적용
+   */
+  applySelectedColorAndTrail() {
+    // 색상 적용 (무지개 색상 특수 처리)
+    if (this.ballColors[this.selectedColorIndex].color === 'rainbow') {
+      document.documentElement.style.setProperty('--ball-color', '#ff0000'); // 초기 색상
+      document.documentElement.style.setProperty('--ball-rainbow', 'true'); // 무지개 플래그
     } else {
-      localStorage.setItem('waveGameHardDeathCount', this.totalDeathCounts.hard.toString());
+      document.documentElement.style.setProperty('--ball-color', this.ballColors[this.selectedColorIndex].color);
+      document.documentElement.style.setProperty('--ball-rainbow', 'false');
+    }
+    
+    // 트레일 적용
+    // if (this.hasTrail && this.selectedTrailIndex > 0) {
+    //   document.documentElement.style.setProperty('--trail-enabled', 'true');
+    //   
+    //   // 트레일 색상 적용 (무지개 트레일 특수 처리)
+    //   if (this.trailColors[this.selectedTrailIndex].color === 'rainbow') {
+    //     document.documentElement.style.setProperty('--trail-color', '#ff0000'); // 초기 색상
+    //     document.documentElement.style.setProperty('--trail-rainbow', 'true'); // 무지개 플래그
+    //   } else {
+    //     document.documentElement.style.setProperty('--trail-color', this.trailColors[this.selectedTrailIndex].color);
+    //     document.documentElement.style.setProperty('--trail-rainbow', 'false');
+    //   }
+    //   
+    //   // 트레일 요소 초기화 (새로 시작)
+    //   this.initializeTrailElements();
+    //   
+    // } else {
+    //   document.documentElement.style.setProperty('--trail-enabled', 'false');
+    //   
+    //   // 트레일 요소 제거
+    //   this.removeTrailElements();
+    // }
+    
+    console.log("색상 및 트레일 적용:", 
+                "공 색상:", this.ballColors[this.selectedColorIndex].color, 
+                "트레일:", this.hasTrail, 
+                "트레일 색상:", this.hasTrail ? this.trailColors[this.selectedTrailIndex].color : "없음");
+  }
+  
+  /**
+   * 트레일 요소 초기화
+   */
+  initializeTrailElements() {
+    // 기존 트레일 요소 제거
+    this.removeTrailElements();
+    
+    // 트레일 위치 배열 초기화
+    this.trailPositions = [];
+    
+    // 트레일 요소 배열 초기화
+    this.trailElements = [];
+  }
+  
+  /**
+   * 트레일 요소 제거
+   */
+  removeTrailElements() {
+    if (this.trailElements && this.trailElements.length > 0) {
+      this.trailElements.forEach(element => {
+        if (element && element.parentNode) {
+          element.remove();
+        }
+      });
+      this.trailElements = [];
     }
   }
   
   /**
-   * 최고 점수 저장
+   * 색상 해금
    */
-  saveHighScore(score) {
-    // 현재 점수 추가
-    this.highScores.push({
-      score: Math.floor(score),
-      date: new Date().toLocaleDateString(),
-      mode: this.gameMode,
-      deaths: this.deathCount
-    });
-    
-    // 점수 순서대로 정렬
-    this.highScores.sort((a, b) => b.score - a.score);
-    
-    // 상위 5개만 유지
-    this.highScores = this.highScores.slice(0, 5);
-    
-    // 로컬 스토리지에 저장
-    localStorage.setItem('waveGameHighScores', JSON.stringify(this.highScores));
-    
-    // 하드모드에서 코인 획득
-    if (this.gameMode === 'hard') {
-      const earnedCoins = Math.floor(score / 10); // 10점당 1코인
-      this.addCoins(earnedCoins);
-    }
-    
-    // 현재 순위 반환 (0-based)
-    return this.highScores.findIndex(item => item.score === Math.floor(score));
-  }
-  
-  /**
-   * 코인 추가 및 저장
-   */
-  addCoins(amount) {
-    this.coins += amount;
-    localStorage.setItem('waveGameCoins', this.coins.toString());
-    
-    // 코인 UI 업데이트
-    if (this.coinDisplay) {
-      this.coinDisplay.textContent = `코인: ${this.coins}`;
-    }
-  }
-  
-  /**
-   * 검은 공 크기 감소 아이템 구매
-   */
-  purchaseBallSizeReduction() {
-    // 현재 업그레이드 비용
-    const cost = this.upgradeCost;
-    
-    if (this.coins >= cost && this.blackBallSizeMultiplier.hard > 2) { // 최소 크기는 기본의 2배
-      this.coins -= cost;
-      this.blackBallSizeMultiplier.hard -= 1; // 크기 10% 감소
-      this.upgradeCount += 1; // 업그레이드 횟수 증가
-      
-      // 다음 업그레이드 비용 계산
-      if (this.upgradeCount === 1) {
-        this.upgradeCost = 200;
-      } else {
-        this.upgradeCost = 200 + (this.upgradeCount - 1) * 100;
-      }
-      
-      // 로컬 스토리지에 저장
-      localStorage.setItem('waveGameCoins', this.coins.toString());
-      localStorage.setItem('waveGameUpgradeCount', this.upgradeCount.toString());
-      
-      // 공 크기 업데이트
-      this.updateBlackBallSize();
-      
-      // UI 업데이트
-      if (this.coinDisplay) {
-        this.coinDisplay.textContent = `코인: ${this.coins}`;
-      }
+  unlockColor(colorIndex) {
+    if (!this.unlockedColors.includes(colorIndex)) {
+      this.unlockedColors.push(colorIndex);
+      this.saveSelectedColor();
       return true;
     }
-    
     return false;
   }
   
   /**
-   * 검은 공 크기 업데이트
+   * 트레일 구매
    */
-  updateBlackBallSize() {
-    const newSize = this.blackBallSize * this.blackBallSizeMultiplier[this.gameMode];
-    document.documentElement.style.setProperty('--ball-size', `${newSize}rem`);
+  purchaseTrail() {
+    console.log("트레일 구매 시도:", this.hasTrail, "코인:", this.coins);
+    if (!this.hasTrail && this.coins >= 50) { // 트레일 기본 가격: 50코인
+      this.coins -= 50;
+      this.hasTrail = true;
+      
+      // 첫 번째 트레일 색상 자동 구매 및 선택 (기본 빨간색)
+      if (!this.purchasedTrails.includes(1)) {
+        this.purchasedTrails.push(1);
+      }
+      this.selectedTrailIndex = 1;
+      
+      this.saveTrailSettings();
+      this.saveCoins();
+      this.applySelectedColorAndTrail();
+      
+      // 코인 UI 업데이트
+      if (this.coinDisplay) {
+        this.coinDisplay.textContent = `코인: ${this.coins}`;
+      }
+      
+      console.log("트레일 구매 성공:", this.hasTrail, "선택된 트레일:", this.selectedTrailIndex);
+      return true;
+    }
+    console.log("트레일 구매 실패:", this.hasTrail, "코인:", this.coins);
+    return false;
+  }
+  
+  /**
+   * 트레일 색상 구매
+   */
+  purchaseTrailColor(colorIndex) {
+    const price = this.trailColors[colorIndex].price;
+    console.log("트레일 색상 구매 시도:", colorIndex, "가격:", price, "코인:", this.coins);
+    
+    if (!this.purchasedTrails.includes(colorIndex) && this.coins >= price) {
+      this.coins -= price;
+      this.purchasedTrails.push(colorIndex);
+      this.saveTrailSettings();
+      this.saveCoins();
+      
+      // 코인 UI 업데이트
+      if (this.coinDisplay) {
+        this.coinDisplay.textContent = `코인: ${this.coins}`;
+      }
+      
+      console.log("트레일 색상 구매 성공:", colorIndex, "구매한 트레일:", this.purchasedTrails);
+      return true;
+    }
+    console.log("트레일 색상 구매 실패:", colorIndex, "구매한 트레일:", this.purchasedTrails);
+    return false;
+  }
+  
+  /**
+   * 선택된 트레일 색상 변경
+   */
+  selectTrailColor(colorIndex) {
+    if (this.purchasedTrails.includes(colorIndex)) {
+      this.selectedTrailIndex = colorIndex;
+      this.saveTrailSettings();
+      this.applySelectedColorAndTrail();
+      return true;
+    }
+    return false;
+  }
+  
+  /**
+   * 선택된 공 색상 변경
+   */
+  selectBallColor(colorIndex) {
+    if (this.unlockedColors.includes(colorIndex)) {
+      this.selectedColorIndex = colorIndex;
+      this.saveSelectedColor();
+      this.applySelectedColorAndTrail();
+      return true;
+    }
+    return false;
+  }
+  
+  /**
+   * 코인 저장
+   */
+  saveCoins() {
+    localStorage.setItem('waveGameCoins', this.coins.toString());
   }
   
   /**
@@ -282,8 +441,69 @@ class WaveSurferGame extends HTMLElement {
       this.deathDisplay.textContent = `죽은 횟수: ${this.deathCount}`;
     }
     
+    // 개발자 모드 버튼 추가
+    this.createDeveloperButton();
+    
+    // 트레일 위치 및 요소 초기화
+    this.trailPositions = [];
+    this.removeTrailElements();
+    
+    // 색상 및 트레일 설정 적용
+    this.applySelectedColorAndTrail();
+    
     // 게임 시작
     this.startGame();
+  }
+  
+  /**
+   * 개발자 모드 버튼 생성
+   */
+  createDeveloperButton() {
+    // 이미 생성된 버튼이 있다면 제거
+    if (this.developerButton && this.developerButton.parentNode) {
+      this.developerButton.remove();
+    }
+    
+    // 새 버튼 생성
+    this.developerButton = document.createElement('div');
+    this.developerButton.className = 'developer-button';
+    this.developerButton.innerHTML = '<span>DEV</span>';
+    this.developerButton.title = '개발자 모드';
+    
+    // 클릭 이벤트 명시적으로 추가
+    this.developerButton.onclick = (e) => {
+      e.stopPropagation(); // 이벤트 버블링 방지
+      console.log('개발자 모드 버튼 클릭됨');
+      this.checkDeveloperPassword();
+    };
+    
+    // DOM에 추가 (항상 맨 앞에)
+    if (this.gameInfoContainer && this.gameInfoContainer.firstChild) {
+      this.gameInfoContainer.insertBefore(this.developerButton, this.gameInfoContainer.firstChild);
+    } else if (this.gameInfoContainer) {
+      this.gameInfoContainer.appendChild(this.developerButton);
+    }
+  }
+  
+  /**
+   * 패스워드 확인
+   */
+  checkDeveloperPassword() {
+    console.log('패스워드 확인 창 표시');
+    const password = prompt('개발자 모드 패스워드를 입력하세요:');
+    console.log('입력된 패스워드:', password);
+    
+    if (password === '4490') {
+      console.log('올바른 패스워드 입력됨');
+      this.activateDeveloperMode();
+      return true;
+    } else if (password !== null) {
+      console.log('잘못된 패스워드 입력됨');
+      alert('패스워드가 올바르지 않습니다.');
+    } else {
+      console.log('패스워드 입력 취소됨');
+    }
+    return false;
   }
   
   /**
@@ -325,7 +545,7 @@ class WaveSurferGame extends HTMLElement {
         <ol class="high-scores-list"></ol>
       </div>
       <div class="button-container">
-        <button class="restart-button">다시 시작</button>
+      <button class="restart-button">다시 시작</button>
       </div>
     `;
     
@@ -443,11 +663,11 @@ class WaveSurferGame extends HTMLElement {
       obstacle.setAttribute('cy', y);
     } else {
       obstacle = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      obstacle.setAttribute('class', obstacleClass);
-      obstacle.setAttribute('width', size);
-      obstacle.setAttribute('height', size);
-      obstacle.setAttribute('x', x - halfSize);
-      obstacle.setAttribute('y', y - halfSize);
+    obstacle.setAttribute('class', obstacleClass);
+    obstacle.setAttribute('width', size);
+    obstacle.setAttribute('height', size);
+    obstacle.setAttribute('x', x - halfSize);
+    obstacle.setAttribute('y', y - halfSize);
     }
     
     // 사이즈와 타입에 따른 색상 변경
@@ -457,11 +677,11 @@ class WaveSurferGame extends HTMLElement {
       fillColor = '#f44336'; // 빨간색 (레드)
     } else {
       // 사각형 장애물의 기존 색상 로직
-      if (size < 50) {
+    if (size < 50) {
         fillColor = '#e91e63'; // 작은 장애물
-      } else if (size < 70) {
+    } else if (size < 70) {
         fillColor = '#9c27b0'; // 중간 장애물
-      } else {
+    } else {
         fillColor = '#673ab7'; // 큰 장애물
       }
     }
@@ -518,8 +738,8 @@ class WaveSurferGame extends HTMLElement {
         obstacle.element.setAttribute('cx', obstacle.x);
         obstacle.element.setAttribute('cy', obstacle.y);
       } else {
-        obstacle.element.setAttribute('x', obstacle.x - obstacle.halfSize);
-        obstacle.element.setAttribute('y', obstacle.y - obstacle.halfSize);
+      obstacle.element.setAttribute('x', obstacle.x - obstacle.halfSize);
+      obstacle.element.setAttribute('y', obstacle.y - obstacle.halfSize);
       }
       
       // 화면을 벗어나면 제거
@@ -622,6 +842,10 @@ class WaveSurferGame extends HTMLElement {
     // 기존 요소 제거
     this.obstacles.forEach(obstacle => obstacle.element.remove());
     this.obstacles = [];
+    
+    // 기존 트레일 제거 및 초기화
+    this.removeTrailElements();
+    this.trailPositions = [];
     
     // 초기 장애물 생성
     setTimeout(() => {
@@ -735,6 +959,14 @@ class WaveSurferGame extends HTMLElement {
     // 요소 업데이트
     this.updateGameElements();
     
+    // 트레일 위치 업데이트
+    if (this.hasTrail && this.selectedTrailIndex > 0) {
+      this.updateTrailPositions();
+    }
+    
+    // 무지개 색상 효과 업데이트 (if enabled)
+    this.updateRainbowEffects();
+    
     // 장애물 생성 (간격)
     const currentTime = Date.now();
     if (currentTime - this.lastObstacleTime > this.obstacleSpawnRate / this.gameSpeed) {
@@ -747,11 +979,129 @@ class WaveSurferGame extends HTMLElement {
   }
   
   /**
+   * 죽은 횟수 저장
+   */
+  saveDeathCount() {
+    // 현재 모드에 따라 죽은 횟수 저장
+    if (this.gameMode === 'easy') {
+      localStorage.setItem('waveGameEasyDeathCount', this.totalDeathCounts.easy.toString());
+    } else {
+      localStorage.setItem('waveGameHardDeathCount', this.totalDeathCounts.hard.toString());
+    }
+  }
+  
+  /**
+   * 최고 점수 저장
+   */
+  saveHighScore(score) {
+    // 현재 점수 추가
+    this.highScores.push({
+      score: Math.floor(score),
+      date: new Date().toLocaleDateString(),
+      mode: this.gameMode,
+      deaths: this.deathCount
+    });
+    
+    // 점수 순서대로 정렬
+    this.highScores.sort((a, b) => b.score - a.score);
+    
+    // 상위 5개만 유지
+    this.highScores = this.highScores.slice(0, 5);
+    
+    // 로컬 스토리지에 저장
+    localStorage.setItem('waveGameHighScores', JSON.stringify(this.highScores));
+    
+    // 하드모드에서 코인 획득
+    if (this.gameMode === 'hard') {
+      const earnedCoins = Math.floor(score / 10); // 10점당 1코인
+      this.addCoins(earnedCoins);
+    }
+    
+    // 현재 순위 반환 (0-based)
+    return this.highScores.findIndex(item => item.score === Math.floor(score));
+  }
+  
+  /**
+   * 공 색상 구매
+   */
+  purchaseBallColor(colorIndex) {
+    const price = this.ballColors[colorIndex].price;
+    
+    if (!this.unlockedColors.includes(colorIndex) && this.coins >= price) {
+      this.coins -= price;
+      this.unlockColor(colorIndex);
+      this.saveCoins();
+      return true;
+    }
+    return false;
+  }
+  
+  /**
+   * 코인 추가 및 저장
+   */
+  addCoins(amount) {
+    this.coins += amount;
+    this.saveCoins();
+    
+    // 코인 UI 업데이트
+    if (this.coinDisplay) {
+      this.coinDisplay.textContent = `코인: ${this.coins}`;
+    }
+  }
+  
+  /**
+   * 검은 공 크기 감소 아이템 구매
+   */
+  purchaseBallSizeReduction() {
+    // 현재 업그레이드 비용
+    const cost = this.upgradeCost;
+    
+    if (this.coins >= cost && this.blackBallSizeMultiplier.hard > 2) { // 최소 크기는 기본의 2배
+      this.coins -= cost;
+      this.blackBallSizeMultiplier.hard -= 1; // 크기 10% 감소
+      this.upgradeCount += 1; // 업그레이드 횟수 증가
+      
+      // 다음 업그레이드 비용 계산
+      if (this.upgradeCount === 1) {
+        this.upgradeCost = 200;
+      } else {
+        this.upgradeCost = 200 + (this.upgradeCount - 1) * 100;
+      }
+      
+      // 로컬 스토리지에 저장
+      this.saveCoins();
+      localStorage.setItem('waveGameUpgradeCount', this.upgradeCount.toString());
+      
+      // 공 크기 업데이트
+      this.updateBlackBallSize();
+      
+      // UI 업데이트
+      if (this.coinDisplay) {
+        this.coinDisplay.textContent = `코인: ${this.coins}`;
+      }
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * 검은 공 크기 업데이트
+   */
+  updateBlackBallSize() {
+    const newSize = this.blackBallSize * this.blackBallSizeMultiplier[this.gameMode];
+    document.documentElement.style.setProperty('--ball-size', `${newSize}rem`);
+  }
+  
+  /**
    * 상점 화면 표시
    */
   showShop() {
     // 게임 오버 화면 숨기기
     this.gameOverScreen.style.display = 'none';
+    
+    console.log("상점 열기 - 코인:", this.coins, "트레일 보유:", this.hasTrail);
+    console.log("선택된 트레일:", this.selectedTrailIndex, "구매한 트레일:", this.purchasedTrails);
     
     // 상점 화면 생성
     const shopScreen = document.createElement('div');
@@ -768,7 +1118,34 @@ class WaveSurferGame extends HTMLElement {
           <p>가격: ${this.upgradeCost} 코인</p>
           <button class="shop-item-button" id="reduce-ball-size">구매하기</button>
         </div>
+        
+        <div class="shop-item">
+          <h3>트레일 효과</h3>
+          <p>캐릭터가 움직일 때 트레일(꼬리) 효과가 생깁니다.</p>
+          <p>상태: ${this.hasTrail ? '구매됨' : '구매 가능'}</p>
+          <p>가격: 50 코인</p>
+          <button class="shop-item-button" id="purchase-trail" ${this.hasTrail ? 'disabled' : ''}>
+            ${this.hasTrail ? '구매됨' : '구매하기'}
+          </button>
+        </div>
       </div>
+      
+      <div class="customization-section">
+        <h3>공 색상 변경</h3>
+        <p>다양한 색상의 공을 구매하세요!</p>
+        <div class="color-options">
+          ${this.generateColorOptions()}
+        </div>
+        
+        ${this.hasTrail ? `
+        <h3>트레일 색상</h3>
+        <p>다양한 색상의 트레일을 구매하세요!</p>
+        <div class="trail-options">
+          ${this.generateTrailOptions()}
+        </div>
+        ` : ''}
+      </div>
+      
       <button class="back-button">돌아가기</button>
     `;
     
@@ -814,6 +1191,110 @@ class WaveSurferGame extends HTMLElement {
       }
     });
     
+    // 트레일 구매 버튼 이벤트
+    const trailButton = shopScreen.querySelector('#purchase-trail');
+    if (trailButton && !this.hasTrail) {
+      trailButton.addEventListener('click', () => {
+        console.log("트레일 구매 버튼 클릭");
+        if (this.purchaseTrail()) {
+          // 구매 성공
+          console.log("트레일 구매 성공 - UI 업데이트");
+          shopScreen.querySelector('.shop-coins').textContent = `보유 코인: ${this.coins}`;
+          trailButton.disabled = true;
+          trailButton.textContent = '구매됨';
+          
+          // 트레일 색상 옵션 표시 (페이지 새로고침 없이)
+          this.showShop(); // 상점 UI 새로고침
+        } else {
+          // 구매 실패
+          console.log("트레일 구매 실패 - 피드백 표시");
+          trailButton.classList.add('purchase-failed');
+          trailButton.textContent = this.coins < 50 ? '코인 부족!' : '이미 보유 중!';
+          
+          setTimeout(() => {
+            trailButton.classList.remove('purchase-failed');
+            trailButton.textContent = '구매하기';
+          }, 1000);
+        }
+      });
+    }
+    
+    // 색상 옵션 버튼 이벤트
+    const colorButtons = shopScreen.querySelectorAll('.ball-color-option');
+    colorButtons.forEach((button, index) => {
+      // 구매 버튼 이벤트
+      const buyButton = button.querySelector('.buy-ball-color');
+      if (buyButton) {
+        buyButton.addEventListener('click', (e) => {
+          e.stopPropagation(); // 상위 클릭 이벤트 전파 방지
+          if (this.purchaseBallColor(index)) {
+            // 구매 성공
+            shopScreen.querySelector('.shop-coins').textContent = `보유 코인: ${this.coins}`;
+            this.showShop(); // 상점 UI 새로고침
+          } else {
+            // 구매 실패
+            buyButton.classList.add('purchase-failed');
+            buyButton.textContent = '코인 부족!';
+            
+            setTimeout(() => {
+              buyButton.classList.remove('purchase-failed');
+              buyButton.textContent = '구매';
+            }, 1000);
+          }
+        });
+      }
+      
+      // 색상 선택 이벤트 (이미 구매한 색상)
+      if (this.unlockedColors.includes(index)) {
+        button.addEventListener('click', () => {
+          if (this.selectBallColor(index)) {
+            // 성공적으로 색상 변경
+            colorButtons.forEach(btn => btn.classList.remove('selected'));
+            button.classList.add('selected');
+          }
+        });
+      }
+    });
+    
+    // 트레일 색상 구매/선택 버튼 이벤트
+    if (this.hasTrail) {
+      const trailColorButtons = shopScreen.querySelectorAll('.trail-color-option');
+      trailColorButtons.forEach((button, index) => {
+        // 구매 버튼 이벤트
+        const buyButton = button.querySelector('.buy-trail-color');
+        if (buyButton) {
+          buyButton.addEventListener('click', (e) => {
+            e.stopPropagation(); // 상위 클릭 이벤트 전파 방지
+            if (this.purchaseTrailColor(index)) {
+              // 구매 성공
+              shopScreen.querySelector('.shop-coins').textContent = `보유 코인: ${this.coins}`;
+              this.showShop(); // 상점 UI 새로고침
+            } else {
+              // 구매 실패
+              buyButton.classList.add('purchase-failed');
+              buyButton.textContent = '코인 부족!';
+              
+              setTimeout(() => {
+                buyButton.classList.remove('purchase-failed');
+                buyButton.textContent = '구매';
+              }, 1000);
+            }
+          });
+        }
+        
+        // 색상 선택 이벤트
+        if (this.purchasedTrails.includes(index)) {
+          button.addEventListener('click', () => {
+            if (this.selectTrailColor(index)) {
+              // 성공적으로 색상 변경
+              trailColorButtons.forEach(btn => btn.classList.remove('selected'));
+              button.classList.add('selected');
+            }
+          });
+        }
+      });
+    }
+    
     // 돌아가기 버튼 이벤트
     shopScreen.querySelector('.back-button').addEventListener('click', () => {
       shopScreen.remove();
@@ -830,6 +1311,332 @@ class WaveSurferGame extends HTMLElement {
       reduceButton.disabled = true;
       reduceButton.textContent = '코인 부족';
     }
+  }
+  
+  /**
+   * 색상 옵션 HTML 생성
+   */
+  generateColorOptions() {
+    let html = '';
+    
+    this.ballColors.forEach((color, index) => {
+      const isUnlocked = this.unlockedColors.includes(index);
+      const isSelected = this.selectedColorIndex === index;
+      const colorStyle = color.color === 'rainbow' ? 
+        'background: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet);' : 
+        `background-color: ${color.color};`;
+      
+      html += `
+        <div class="ball-color-option ${isUnlocked ? 'unlocked' : 'locked'} ${isSelected ? 'selected' : ''}" 
+             data-index="${index}" style="${colorStyle}">
+          <span class="color-name">${color.name}</span>
+          ${!isUnlocked ? 
+            `<span class="price">${color.price} 코인</span>
+             <button class="buy-ball-color">구매</button>` : 
+            ''}
+          ${isSelected ? '<span class="selected-mark">✓</span>' : ''}
+        </div>
+      `;
+    });
+    
+    return html;
+  }
+  
+  /**
+   * 트레일 색상 옵션 HTML 생성
+   */
+  generateTrailOptions() {
+    let html = '';
+    
+    this.trailColors.forEach((color, index) => {
+      if (index === 0) return; // '없음' 옵션 제외
+      
+      const isPurchased = this.purchasedTrails.includes(index);
+      const isSelected = this.selectedTrailIndex === index;
+      const colorStyle = color.color === 'rainbow' ? 
+        'background: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet);' : 
+        `background-color: ${color.color};`;
+      
+      html += `
+        <div class="trail-color-option ${isPurchased ? 'purchased' : ''} ${isSelected ? 'selected' : ''}" 
+             data-index="${index}" style="${colorStyle}">
+          <span class="color-name">${color.name}</span>
+          ${!isPurchased ? 
+            `<span class="price">${color.price} 코인</span>
+             <button class="buy-trail-color">구매</button>` : 
+            ''}
+          ${isSelected ? '<span class="selected-mark">✓</span>' : ''}
+        </div>
+      `;
+    });
+    
+    return html;
+  }
+  
+  /**
+   * 트레일 위치 업데이트
+   */
+  updateTrailPositions() {
+    // 트레일 기능이 활성화되지 않았다면 건너뜀
+    if (!this.hasTrail || this.selectedTrailIndex <= 0) return;
+    
+    // 마우스 위치 참조
+    const mouse = { sx: this.mouseX, sy: this.mouseY, v: this.mouseVelocity };
+    
+    // 토성 고리 효과 매개변수
+    const numRings = 2;        // 고리 수 (3 -> 2)
+    const ringsPerLayer = 18;  // 각 고리의 입자 수 (12 -> 18)
+    
+    // 이전 트레일 위치 정리 (배열 크기 제한)
+    if (this.trailPositions.length > numRings * ringsPerLayer) {
+      this.trailPositions.splice(0, this.trailPositions.length - numRings * ringsPerLayer);
+    }
+    
+    // 마우스 속도 계산
+    const velocity = mouse.v || 0;
+    const velocityFactor = Math.min(1, velocity / 30);
+    
+    // 각 고리마다 생성
+    for (let ring = 1; ring <= numRings; ring++) {
+      // 각 고리의 반지름 (더 큰 값으로 조정)
+      const baseRadius = 25 + ring * 20;  // 기존: 20 + ring * 15
+      const radius = baseRadius * (1 + velocityFactor * 0.3);  // 속도에 따른 크기 증가
+      
+      // 고리의 회전 각도 (시간에 따라 변화, 각 고리마다 다른 방향과 속도)
+      const time = Date.now() * 0.001;
+      const direction = ring % 2 === 0 ? 1 : -1;
+      const rotationSpeed = 0.5 + ring * 0.3;  // 회전 속도 증가
+      const rotation = (time * rotationSpeed * direction) % (Math.PI * 2);
+      
+      // 각 고리에 입자 배치
+      for (let i = 0; i < ringsPerLayer; i++) {
+        // 입자의 각도
+        const angle = (i / ringsPerLayer) * Math.PI * 2 + rotation;
+        
+        // 입자의 위치 계산
+        const x = mouse.sx + Math.cos(angle) * radius;
+        const y = mouse.sy + Math.sin(angle) * radius;
+        
+        // 입자 깜빡임 효과 (사인파 사용, 더 강한 효과)
+        const blinkSpeed = 2.0 + ring * 0.7;  // 깜빡임 속도 증가
+        const blinkPhase = (time * blinkSpeed + i / ringsPerLayer) % 1;
+        const blinkFactor = Math.pow((Math.sin(blinkPhase * Math.PI * 2) + 1) / 2, 0.8);  // 더 강한 깜빡임
+        
+        this.trailPositions.push({
+          x: x,
+          y: y,
+          ring: ring,
+          angle: angle,
+          blink: blinkFactor,
+          v: velocity
+        });
+      }
+    }
+    
+    // 트레일 요소 업데이트
+    this.updateTrailElements();
+  }
+  
+  /**
+   * 트레일 요소 업데이트
+   */
+  updateTrailElements() {
+    // 트레일 기능이 활성화되지 않았다면 건너뜀
+    if (!this.hasTrail || this.selectedTrailIndex <= 0) return;
+    
+    // 기존 트레일 요소 참조 또는 새로 생성
+    if (!this.trailElements) {
+      this.trailElements = [];
+    }
+    
+    // SVG 요소가 제대로 있는지 확인
+    if (!this.svg) {
+      console.error('SVG 요소를 찾을 수 없습니다!');
+      return;
+    }
+    
+    console.log(`트레일 업데이트 중: ${this.trailPositions.length}개 위치, 색상 인덱스: ${this.selectedTrailIndex}`);
+    
+    // 각 트레일 위치에 대해 요소 생성 또는 업데이트
+    for (let i = 0; i < this.trailPositions.length; i++) {
+      const pos = this.trailPositions[i];
+      
+      // 마우스 속도에 따른 효과 조정
+      const velocity = pos.v || 0;
+      const velocityFactor = Math.min(1, velocity / 30);
+      
+      const ring = pos.ring || 1;
+      const ringFactor = 1 - ((ring - 1) / 3) * 0.15;  // 바깥 고리의 차이 줄임
+      
+      // 깜빡임 효과 적용
+      const blinkFactor = pos.blink || 0.5;
+      
+      // 속도와 고리, 깜빡임에 따른 효과 계산 (크기 키움)
+      const size = 8 * ringFactor * (0.9 + 0.5 * velocityFactor);  // 크기 증가
+      const opacity = Math.min(1, 1.0 * ringFactor * blinkFactor * (0.85 + 0.4 * velocityFactor));  // 투명도 증가
+      
+      // 요소가 없으면 새로 생성
+      if (!this.trailElements[i]) {
+        const trail = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        trail.setAttribute('class', 'trail-element ring-particle');
+        trail.setAttribute('r', size);
+        
+        // 무지개 트레일인 경우 특수 클래스 추가
+        if (this.trailColors[this.selectedTrailIndex].color === 'rainbow') {
+          trail.classList.add('rainbow-trail');
+        }
+        
+        this.svg.appendChild(trail);
+        this.trailElements[i] = trail;
+        console.log(`새 트레일 요소 생성: 인덱스 ${i}, 크기 ${size}, 색상: ${this.trailColors[this.selectedTrailIndex].color}`);
+      }
+      
+      // 위치 및 스타일 업데이트
+      const element = this.trailElements[i];
+      element.setAttribute('cx', pos.x);
+      element.setAttribute('cy', pos.y);
+      element.setAttribute('r', size);
+      element.setAttribute('opacity', opacity);
+      
+      // 글로우 효과 추가
+      const glowColor = this.trailColors[this.selectedTrailIndex].color === 'rainbow' 
+        ? `hsl(${((pos.angle || 0) * 180 / Math.PI + Date.now() * 0.05) % 360}, 100%, 70%)` 
+        : this.trailColors[this.selectedTrailIndex].color;
+        
+      element.setAttribute('fill', glowColor);
+      element.setAttribute('filter', 'url(#glow)');
+      
+      // 요소가 확실히 visible 상태인지 확인
+      element.style.display = 'block';
+      element.style.visibility = 'visible';
+    }
+    
+    // 트레일 배열보다 많은 요소가 있다면 제거
+    while (this.trailElements.length > this.trailPositions.length) {
+      const trail = this.trailElements.pop();
+      if (trail && trail.parentNode) {
+        trail.remove();
+      }
+    }
+    
+    // 글로우 필터가 없다면 추가
+    this.ensureGlowFilter();
+  }
+  
+  /**
+   * SVG 글로우 필터 추가
+   */
+  ensureGlowFilter() {
+    if (!this.svg) return;
+    
+    // 이미 필터가 존재하는지 확인
+    if (this.svg.querySelector('#glow')) return;
+    
+    // SVG 필터 정의 추가
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+    filter.setAttribute('id', 'glow');
+    filter.setAttribute('x', '-50%');
+    filter.setAttribute('y', '-50%');
+    filter.setAttribute('width', '200%');
+    filter.setAttribute('height', '200%');
+    
+    // 가우시안 블러 필터
+    const feGaussianBlur = document.createElementNS('http://www.w3.org/2000/svg', 'feGaussianBlur');
+    feGaussianBlur.setAttribute('stdDeviation', '3.5');  // 블러 강도 증가
+    feGaussianBlur.setAttribute('result', 'coloredBlur');
+    
+    // 원본과 블러 합성
+    const feMerge = document.createElementNS('http://www.w3.org/2000/svg', 'feMerge');
+    const feMergeNode1 = document.createElementNS('http://www.w3.org/2000/svg', 'feMergeNode');
+    feMergeNode1.setAttribute('in', 'coloredBlur');
+    const feMergeNode2 = document.createElementNS('http://www.w3.org/2000/svg', 'feMergeNode');
+    feMergeNode2.setAttribute('in', 'SourceGraphic');
+    
+    feMerge.appendChild(feMergeNode1);
+    feMerge.appendChild(feMergeNode2);
+    
+    filter.appendChild(feGaussianBlur);
+    filter.appendChild(feMerge);
+    defs.appendChild(filter);
+    
+    this.svg.appendChild(defs);
+    console.log("글로우 필터가 추가되었습니다.");
+  }
+  
+  /**
+   * 무지개 효과 업데이트
+   */
+  updateRainbowEffects() {
+    // 현재 시간을 기준으로 무지개 색상 계산
+    const time = Date.now() * 0.001;
+    
+    // 공이 무지개 색상인 경우
+    if (this.ballColors[this.selectedColorIndex].color === 'rainbow') {
+      const hue = (time * 50) % 360;
+      document.documentElement.style.setProperty('--ball-color', `hsl(${hue}, 100%, 50%)`);
+      
+      // 무지개 클래스 추가 (애니메이션 대신 직접 색상 제어)
+      document.querySelector('a-waves:before')?.classList.add('rainbow');
+    } else {
+      // 무지개가 아닌 경우 클래스 제거
+      document.querySelector('a-waves:before')?.classList.remove('rainbow');
+    }
+    
+    // 트레일이 무지개 색상인 경우
+    if (this.hasTrail && this.selectedTrailIndex > 0 && this.trailColors[this.selectedTrailIndex].color === 'rainbow') {
+      // 각 트레일 요소에 대해 약간 다른 색상 적용 (위치에 따라)
+      if (this.trailElements) {
+        this.trailElements.forEach((element, index) => {
+          if (!element) return;
+          
+          // 각 요소마다 약간 다른 색상 오프셋 적용
+          const offset = index * 30; // 30도씩 색상 변화
+          const elementHue = (hue + offset) % 360;
+          element.setAttribute('fill', `hsl(${elementHue}, 100%, 50%)`);
+        });
+      }
+    }
+  }
+  
+  /**
+   * 개발자 모드 활성화
+   */
+  activateDeveloperMode() {
+    this.isDeveloperMode = true;
+    
+    // 개발자 모드 상태 저장
+    localStorage.setItem('waveGameDeveloperMode', 'true');
+    
+    // 코인 99999로 설정
+    this.coins = 99999;
+    this.saveCoins();
+    
+    // 코인 UI 업데이트
+    if (this.coinDisplay) {
+      this.coinDisplay.textContent = `코인: ${this.coins}`;
+    }
+    
+    // 모든 색상 해금
+    this.ballColors.forEach((color, index) => {
+      this.unlockColor(index);
+    });
+    
+    // 모든 트레일 색상 구매
+    this.trailColors.forEach((color, index) => {
+      if (!this.purchasedTrails.includes(index)) {
+        this.purchasedTrails.push(index);
+      }
+    });
+    
+    // 트레일 기능 활성화
+    this.hasTrail = true;
+    
+    // 설정 저장
+    this.saveTrailSettings();
+    
+    // 개발자 모드 활성화 메시지
+    alert('🚀 개발자 모드가 활성화되었습니다!');
   }
 }
 
